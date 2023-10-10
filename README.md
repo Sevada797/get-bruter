@@ -2,7 +2,7 @@
 This is a passive get parameter brute-forcing tool,
 my tool is good for "ignore reflections count" future.
 
-The main minuse is that it works slow for now, but I am tending to make it faster without usnig pythons requests library.
+The main minuse is that it works slow for now, but I am tending to make it faster without using pythons requests library.
 
 
 Why you need that future?
