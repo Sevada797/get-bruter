@@ -4,7 +4,6 @@ my tool is good for "ignore reflections count" future.
 
 The main minuse is that it works slow for now, but I am tending to make it faster without using pythons requests library.
 
-
 Why you need that future?
 Well consider your ?ANYTHING=test get's reflected in HTML like this --> "x.com/?ANYTHING=test", 
 
