@@ -14,3 +14,6 @@ Also tell me if you want me to add up
 
 About wordlist
 I got wordlist by merging AI generated wordlist + some github wordlist.
+
+## Useful?
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-donate-orange?style=flat&logo=buy-me-a-coffee)](https://buymeacoffee.com/zatikyansed)
