@@ -1,2 +1,0 @@
-http://127.0.0.1:8000/?a=NoWayThisCouldBeInHTML64f27e18356fa968045
-http://127.0.0.1:8000/?b=NoWayThisCouldBeInHTML64f27e18356fa968045

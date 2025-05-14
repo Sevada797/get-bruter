@@ -90,7 +90,7 @@ async def run_all_tasks(urls, params, querySign, value):
         await asyncio.gather(*tasks)
 
 # Main logic to check if URL or file is provided
-if urlOrFile.startswith("http://") or urlOrFile.startswith("https://"):
+if urlOrFile.startswith("https://") or urlOrFile.startswith("https://"):
     # Direct URL input
     with open(wlist, "r") as file:
         params = [line.strip() for line in file]
@@ -102,7 +102,7 @@ else:
     with open(wlist, "r") as file1, open(urlOrFile, "r") as file2:
         params = [line.strip() for line in file1]
         # Adding the proper prefix for subdomains
-        urls = [f"http://{line.strip()}/" for line in file2]  # Use "https://" for production if needed
+        urls = [f"https://{line.strip()}/" for line in file2]  # Use "https://" for production if needed
     # Run tasks for subdomains
     asyncio.run(run_all_tasks(urls, params, querySign, value))
 
