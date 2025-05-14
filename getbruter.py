@@ -4,6 +4,9 @@ import random
 import urllib3
 import asyncio
 import aiohttp
+import traceback
+
+
 
 # Disable only the specific warning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -34,20 +37,6 @@ headers = {
     "Accept-Encoding": "gzip, deflate, br"
 }
 
-# Async version of mymain
-async def mymain_async(session, url, param, querySign, value, rcount):
-    full_url = f"{url}{querySign}{param.strip()}={value}"
-    print(f"Testing URL: {full_url}")
-
-    try:
-        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as response:
-            html = await response.text()
-            if findReflections(0, rcount, value, html):
-                print(f"\n[+] Found reflections for parameter - {param.strip()}")
-                with open("getfound.txt", "a") as f:
-                    f.write(full_url + "\n")
-    except Exception as e:
-        print(f"[-] Error on {param.strip()} -> {str(e)}")
 
 # Check for reflections in the response HTML
 def findReflections(n, rcount, value, html):
@@ -65,10 +54,13 @@ def getIgnoreRcount(value, html):
         rcount += 1
     return rcount
 
+# Set a reasonable timeout for aiohttp requests
+timeout = aiohttp.ClientTimeout(total=10)  # 5 seconds max for full request
+
 # Run all tasks asynchronously
 async def run_all_tasks(urls, params, querySign, value):
     conn = aiohttp.TCPConnector(limit=100)  # Set limit based on aggressiveness
-    async with aiohttp.ClientSession(connector=conn) as session:
+    async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
         tasks = []
         for url in urls:
             try:
@@ -78,7 +70,8 @@ async def run_all_tasks(urls, params, querySign, value):
                     html = await resp.text()
                     rcount = getIgnoreRcount(value, html)
                     print(f"Found ignore reflection count for {url}: {rcount}")
-            except:
+            except Exception as e:
+                print(f"[!] Error while getting ignore reflection count for {url} -> {str(e)}")
                 rcount = 0
 
             # Now loop through params and run mymain_async for each one
@@ -89,8 +82,27 @@ async def run_all_tasks(urls, params, querySign, value):
 
         await asyncio.gather(*tasks)
 
+# Async version of mymain with timeout handled by session
+async def mymain_async(session, url, param, querySign, value, rcount):
+    full_url = f"{url}{querySign}{param.strip()}={value}"
+    print(f"Testing URL: {full_url}")
+
+    try:
+        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as response:
+            html = await response.text()
+            if findReflections(0, rcount, value, html):
+                print(f"\n[+] Found reflections for parameter - {param.strip()}")
+                with open("getfound.txt", "a") as f:
+                    f.write(full_url + "\n")
+    except Exception as e:
+        #print(f"[-] Error on {param.strip()} -> {type(e).__name__}: {e}")
+        #traceback.print_exc()
+        pass  # stay silent like a shadow 😎
+
+
+
 # Main logic to check if URL or file is provided
-if urlOrFile.startswith("https://") or urlOrFile.startswith("https://"):
+if urlOrFile.startswith("http://") or urlOrFile.startswith("https://"):
     # Direct URL input
     with open(wlist, "r") as file:
         params = [line.strip() for line in file]
@@ -100,9 +112,10 @@ if urlOrFile.startswith("https://") or urlOrFile.startswith("https://"):
 else:
     # Handling subdomains
     with open(wlist, "r") as file1, open(urlOrFile, "r") as file2:
-        params = [line.strip() for line in file1]
         # Adding the proper prefix for subdomains
-        urls = [f"https://{line.strip()}/" for line in file2]  # Use "https://" for production if needed
+        params = [line.strip() for line in file1 if line.strip()]
+        urls = [f"https://{line.strip()}/" for line in file2 if line.strip()]
+
     # Run tasks for subdomains
     asyncio.run(run_all_tasks(urls, params, querySign, value))
 
