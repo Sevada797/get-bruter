@@ -1,19 +1,50 @@
 # get-bruter
-This is a passive get parameter brute-forcing tool,
-my tool is good for "ignore reflections count" future.
 
-The main minuse is that it works slow for now, but I am tending to make it faster without using pythons requests library.
+**get-bruter** is a fast GET parameter brute-forcing tool designed for security researchers and penetration testers. It scans GET parameters for reflected values in the HTML response.
 
-Why you need that future?
-Well consider your ?ANYTHING=test get's reflected in HTML like this --> "x.com/?ANYTHING=test", 
+## Features
 
-this means any parameter's value will get reflected, and that's where you need "Ignore reflections count".
+- **High-Speed Scanning**: Asynchronous HTTP requests for fast scanning.
+- **Reflection Count Tracking**: Detects how many times a parameter is reflected.
+- **Customizable Wordlists**: Includes **alpha1+2** and **commonparams** wordlists.
+- **Flexible URL Input**: Supports direct URLs or subdomain lists.
 
-Also tell me if you want me to add up 
-"add session cookies" future, if there is at least one person who will want that future I will add it up.
+## Installation
 
-About wordlist
-I got wordlist by merging AI generated wordlist + some github wordlist.
+1. Clone the repo:
+
+    ```bash
+    git clone git@github.com:Sevada797/get-bruter.git
+    cd get-bruter
+    ```
+
+2. Install dependencies:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3. Run the tool:
+
+    ```bash
+    python getbruter.py
+    ```
+
+## How It Works
+
+- Input a **URL or file** of subdomains.
+- Select a **query sign** (`?` or `&`).
+- Choose a **wordlist** (alpha1+2 or commonparams).
+- **get-bruter** checks for parameter reflections and logs results in `getfound.txt`.
+
+## Future Features
+
+- **Session Cookie Support**: Let me know if you need this!
+
+## Wordlist
+
+Includes **AI-generated** and **GitHub** wordlists. You can add your own.
 
 ## Useful?
+
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-donate-orange?style=flat&logo=buy-me-a-coffee)](https://buymeacoffee.com/zatikyansed)
