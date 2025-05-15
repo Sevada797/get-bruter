@@ -59,28 +59,33 @@ timeout = aiohttp.ClientTimeout(total=10)  # 5 seconds max for full request
 
 # Run all tasks asynchronously
 async def run_all_tasks(urls, params, querySign, value):
-    conn = aiohttp.TCPConnector(limit=100)  # Set limit based on aggressiveness
+    conn = aiohttp.TCPConnector(limit=100)
     async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
-        tasks = []
         for url in urls:
             try:
-                # Get the reflection count once for the URL before looping through params
                 test_url = f"{url}{querySign}someNonExistingParam={value}"
                 async with session.get(test_url, headers=headers, allow_redirects=True, ssl=False) as resp:
                     html = await resp.text()
                     rcount = getIgnoreRcount(value, html)
-                    print(f"Found ignore reflection count for {url}: {rcount}")
+                    print(f"\n[***] Scanning subdomain: {url}")
+                    print(f"[~] Found ignore reflection count for {url}: {rcount}")
             except Exception as e:
                 print(f"[!] Error while getting ignore reflection count for {url} -> {str(e)}")
                 rcount = 0
 
-            # Now loop through params and run mymain_async for each one
+            # Only gather tasks for this one subdomain
+            tasks = []
             for param in params:
                 tasks.append(
                     mymain_async(session, url, param, querySign, value, rcount)
                 )
+            await asyncio.gather(*tasks)
 
-        await asyncio.gather(*tasks)
+            print(f"[~] Sleeping 0.05 second after {url} to stay stealthy...")
+            await asyncio.sleep(0.05)
+
+
+
 
 # Async version of mymain with timeout handled by session
 async def mymain_async(session, url, param, querySign, value, rcount):
