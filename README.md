@@ -29,6 +29,12 @@
     ```bash
     python getbruter.py
     ```
+4. For setting up easy-to-use (recommended) run:
+
+    ```
+    bash setup.sh
+    ```
+    so that you can call the tool from any path.
 
 ## How It Works
 
