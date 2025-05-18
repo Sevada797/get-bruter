@@ -12,6 +12,12 @@ import traceback
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 version="2.0"
+try:
+    path=os.environ["GETBRUTER_PATH"]+"/"
+except:
+    path=""
+
+
 # Clear screen
 os.system("clear")
 time.sleep(1)
@@ -27,7 +33,7 @@ wlist_choice = input("""~Worldlists available~
 2) commonparams
 3) (enter wordlist if not in current path use absolute path)
 Your choice: """)
-wlists = ['./wlists/alpha1+2.txt', './wlists/commonparams.txt']
+wlists = [path+'wlists/alpha1+2.txt', path+'wlists/commonparams.txt']
 try: 
     wlist = wlists[int(wlist_choice) - 1]
 except:
@@ -40,13 +46,21 @@ headers = {
     "User-Agent": "chrome",
     "Accept-Encoding": "gzip, deflate, br"
 }
-
+# define for global
+reflectioncount=0
 
 # Check for reflections in the response HTML
+# Check for reflections in the response HTML
 def findReflections(n, rcount, value, html):
+    global reflectioncount
+    reflectioncount=n
+    if (int(html.find(value)==-1)): # default reflection 0 return case
+        return False
     splited_html = html[int(html.find(value) + len(value)):] if n != 0 else html
-    if n == rcount:
-        return splited_html.find(value) != -1
+    if (splited_html.find(value)==-1 and n<=rcount):
+        return False
+    elif n > rcount:
+        return splited_html.find(value) == -1 or findReflections(n + 1, rcount, value, splited_html)
     else:
         return findReflections(n + 1, rcount, value, splited_html)
 
@@ -93,6 +107,7 @@ async def run_all_tasks(urls, params, querySign, value):
 
 # Async version of mymain with timeout handled by session
 async def mymain_async(session, url, param, querySign, value, rcount):
+    global reflectioncount
     full_url = f"{url}{querySign}{param.strip()}={value}"
     print(f"Testing URL: {full_url}")
 
@@ -102,7 +117,8 @@ async def mymain_async(session, url, param, querySign, value, rcount):
             if findReflections(0, rcount, value, html):
                 print(f"\n[+] Found reflections for parameter - {param.strip()}")
                 with open("getfound.txt", "a") as f:
-                    f.write(full_url + "\n")
+                    f.write(f"{full_url} -> {str(reflectioncount)} (ignoreRCount={rcount})\n")  # +" -> "+ str(reflectioncount)   later add this but not rn, since I used recursion, it stops on found item and doesn't get for you all reflection differences -_-
+                    # ahh yeahh recursion + or logic haha 
     except Exception as e:
         #print(f"[-] Error on {param.strip()} -> {type(e).__name__}: {e}")
         #traceback.print_exc()
