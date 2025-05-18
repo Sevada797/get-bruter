@@ -40,7 +40,7 @@
 
 - Input a **URL or file** of subdomains.
 - Select a **query sign** (`?` or `&`).
-- Choose a **wordlist** (alpha1+2 or commonparams).
+- Choose a **wordlist** (alpha1+2, commonparams options or custom - you provide).
 - **get-bruter** checks for parameter reflections and logs results in `getfound.txt`.
 
 ## Future Features
