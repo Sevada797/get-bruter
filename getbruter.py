@@ -11,23 +11,27 @@ import traceback
 # Disable only the specific warning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+version="2.0"
 # Clear screen
 os.system("clear")
 time.sleep(1)
 os.system("clear")
-print("--------------------------MyGetBruter1.0.1--------------------------")
+print(f"--------------------------Get-Bruter V{version}--------------------------")
 print("Author: @Sevada797\n")
 
 # User input
 urlOrFile = input("Enter url or filename: ")
 querySign = input("Choose either ? or & (if there is ? in url, choose &, default is ?): ") or "?"
-wlist_choice = int(input("""~Worldlists available~
+wlist_choice = input("""~Worldlists available~
 1) alpha1+2
 2) commonparams
-Your choice: """))
+3) (enter wordlist if not in current path use absolute path)
+Your choice: """)
 wlists = ['./wlists/alpha1+2.txt', './wlists/commonparams.txt']
-wlist = wlists[wlist_choice - 1]
-
+try: 
+    wlist = wlists[int(wlist_choice) - 1]
+except:
+    wlist=wlist_choice
 # Value to use in URL parameters
 value = f"NoWayThisCouldBeInHTML64f27e18356fa{random.randint(0, 1000000)}"
 
