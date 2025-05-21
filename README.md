@@ -2,6 +2,9 @@
 
 **get-bruter** is a fast GET parameter brute-forcing tool designed for security researchers and penetration testers. It scans GET parameters for reflected values in the HTML response.
 
+## Demo (GIF)
+![Demo](https://imgur.com/a/AuPxkb0)
+
 ## Features
 
 - **High-Speed Scanning**: Asynchronous HTTP requests for fast scanning.
