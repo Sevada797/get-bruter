@@ -29,9 +29,14 @@
 
 3. Run the tool:
 
-    ```bash
+    ```
     python getbruter.py
     ```
+or dynamit mode (just provide bunch of urls after 'grep ? urls | grep = >4d ')
+run ```
+    python3 getbruter.py --dynamit
+    ```
+additionally these are equivalent to running `gbr` & `gbr d` (4th step should be done for this)
 4. For setting up easy-to-use (recommended) run:
 
     ```
