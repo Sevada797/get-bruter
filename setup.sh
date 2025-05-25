@@ -1,1 +1,12 @@
-echo -e "\n## Get-Bruter setup 🐍\ngbr() {\n  python3 $(pwd)/getbruter.py;\n}\nexport GETBRUTER_PATH=$(pwd)\n# 📟 To use, type: gbr\n" >> ~/.bashrc && echo -e "\n✅ Setup done! Reload shell or run: source ~/.bashrc" && echo "📟 To use, type: gbr"
+echo -e "\n## Get-Bruter setup 🐍
+gbr() {
+  if [ \"\$1\" == \"d\" ]; then
+    shift
+    python3 $(pwd)/getbruter.py --dynamit \"\$@\"
+  else
+    python3 $(pwd)/getbruter.py \"\$@\"
+  fi
+}
+export GETBRUTER_PATH=$(pwd)
+# 📟 To use, type: gbr
+" >> ~/.bashrc && echo -e "\n✅ Setup done! Reload shell or run: source ~/.bashrc" && echo "📟 To use, type: gbr"
