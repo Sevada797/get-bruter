@@ -37,6 +37,7 @@ run ```
     python3 getbruter.py --dynamit
     ```
 additionally these are equivalent to running `gbr` & `gbr d` (4th step should be done for this)
+
 4. For setting up easy-to-use (recommended) run:
 
     ```
