@@ -7,6 +7,15 @@ import aiohttp
 import traceback
 import sys
 from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+from aiohttp import ClientConnectorError
+import signal
+import socket
+
+def handler(signum, frame):
+    print("\n[!] Stopped by user. Exiting.")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, handler)
 
 
 
@@ -113,41 +122,41 @@ async def handle_url(session, raw_url, base_value):
         qs = dict(parse_qsl(parsed.query))
         param_names = list(qs.keys())
 
-        # Step 1: Add dummy param to calculate ignore reflection count
         dummy_param = "someNonExistingParam"
         while dummy_param in qs:
             dummy_param += "_x"
         qs[dummy_param] = base_value
 
-        # Step 2: Create a unique value for each real param
-        unique_values = {}
+        # Rebuild the URL with dummy param
+        new_query = urlencode(qs)
+        parsed = parsed._replace(query=new_query)
+        full_url = urlunparse(parsed)
+
+        print(f"\n[~] Testing: {raw_url}")
+        
+        try:
+            async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+                html = await resp.text()
+                rcount = getIgnoreRcount(base_value, html)
+                print(f"[+] Reflection count for {raw_url}: {rcount}")
+        except (ClientConnectorError, socket.gaierror) as dns_error:
+            print(f"[!] DNS error or cannot resolve host: {raw_url}")
+            return
+        except asyncio.TimeoutError:
+            print(f"[!] Timeout while accessing: {raw_url}")
+            return
+        except Exception as e:
+            print(f"[!] General error for {raw_url}: {e}")
+            return
+
+        tasks = []
         for param in param_names:
-            unique_values[param] = f"NoWayThisCouldBeInHTML64f27e18356fa{random.randint(0, 1000000)}"
-            qs[param] = unique_values[param]  # Replace value
-
-        full_qs = urlencode(qs)
-        full_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, full_qs, parsed.fragment))
-
-        # Step 3: Make the request with all modified param values
-        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
-            html = await resp.text()
-            rcount = getIgnoreRcount(base_value, html)
-            print(f"\n[***] {raw_url}")
-            print(f"[~] Status: {resp.status} | Ignore reflection count (base): {rcount}")
-
-        # Step 4: Check each param's unique value in the response
-        for param, unique_val in unique_values.items():
-            print(f"    [~] Scanning param: {param} = {unique_val}")
-            if findReflections(0, rcount, unique_val, html):
-                print(f"    [+] Reflected param: {param}")
-                with open("getfound.txt", "a") as f:
-                    f.write(f"{full_url} -> {param}={unique_val} (ignoreRCount={rcount})\n")
+            unique_val = f"NoWayThisCouldBeInHTML{random.randint(0,9999999)}"
+            tasks.append(mymain_async(session, raw_url, param, "?" if "?" not in raw_url else "&", unique_val, rcount))
+        await asyncio.gather(*tasks)
 
     except Exception as e:
-        print(f"[!] Error on {raw_url}: {e}")
-
-
-
+        print(f"[!] Unexpected error on URL {raw_url}: {e}")
 
 
 
