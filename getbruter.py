@@ -123,8 +123,6 @@ async def handle_url(session, raw_url, base_value):
         param_names = list(qs.keys())
 
         dummy_param = "someNonExistingParam"
-        while dummy_param in qs:
-            dummy_param += "_x"
         qs[dummy_param] = base_value
 
         # Rebuild the URL with dummy param
