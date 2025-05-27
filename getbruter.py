@@ -48,7 +48,10 @@ headers = {
 # define for global
 reflectioncount=0
 
-# Check for reflections in the response HTML
+###########################
+## STARTOF simple core funcs
+############################
+
 # Check for reflections in the response HTML
 def findReflections(n, rcount, value, html):
     global reflectioncount
@@ -63,16 +66,27 @@ def findReflections(n, rcount, value, html):
     else:
         return findReflections(n + 1, rcount, value, splited_html)
 
-# Get the ignore reflection count dynamically
+## Get the ignore reflection count dynamically
 def getIgnoreRcount(value, html):
     rcount = 0
     while html.find(value) != -1:
         html = html[int(html.find(value) + len(value)):]
         rcount += 1
     return rcount
+###########################
+## ENDOF simple core funcs
+############################
+
+
 
 # Set a reasonable timeout for aiohttp requests
 timeout = aiohttp.ClientTimeout(total=10)  # 5 seconds max for full request
+
+
+
+####~~~~~~~~~~~~~~~~~~~~~~#####
+####   START OF ASYNCS    #####
+####~~~~~~~~~~~~~~~~~~~~~~#####
 
 # Run all tasks asynchronously
 async def run_all_tasks(urls, params, querySign, value):
@@ -101,7 +115,9 @@ async def run_all_tasks(urls, params, querySign, value):
             print(f"[~] Sleeping 0.05 second after {url} to stay stealthy...")
             await asyncio.sleep(0.05)
 
+####################################################################################
 # Dynamit mode: each param gets a unique value, then reflection is checked per that value
+####################################################################################
 async def run_dynamit_mode(filename, base_value):
     try:
         with open(filename, "r") as f:
@@ -155,8 +171,68 @@ async def handle_url(session, raw_url, base_value):
 
     except Exception as e:
         print(f"[!] Unexpected error on URL {raw_url}: {e}")
+############################
+## endof dynamit mode
+###########################
 
 
+##################################
+## STARTOF dynamit-cookie module
+##################################
+async def run_dynamit_cookie_mode(filename):
+    try:
+        with open(filename, "r") as f:
+            urls = [line.strip() for line in f if line.strip()]
+    except Exception as e:
+        print(f"[!] Failed to read file: {filename} | Error: {e}")
+        return
+
+    conn = aiohttp.TCPConnector(limit=100)
+    async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
+        tasks = [handle_cookie_reflection(session, url) for url in urls]
+        await asyncio.gather(*tasks)
+
+async def handle_cookie_reflection(session, raw_url):
+    try:
+        parsed = urlparse(raw_url)
+        qs = dict(parse_qsl(parsed.query))
+        param_names = list(qs.keys())
+
+        # Assign unique values
+        values = {param: f"CheckMeInCookie_{random.randint(0, 99999)}_{i}" for i, param in enumerate(param_names)}
+        for param, val in values.items():
+            qs[param] = val
+
+        # Rebuild the URL
+        new_query = urlencode(qs)
+        parsed = parsed._replace(query=new_query)
+        full_url = urlunparse(parsed)
+
+        print(f"\n[🍪] Testing (cookies): {full_url}")
+        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+            cookies = resp.cookies
+            set_cookie_headers = resp.headers.getall("Set-Cookie", [])
+
+            if not set_cookie_headers:
+                print("[~] No Set-Cookie headers.")
+                return
+
+            matched = False
+            for param, val in values.items():
+                for cookie in set_cookie_headers:
+                    if val in cookie:
+                        print(f"[+] Param '{param}' reflected in cookie!")
+                        with open("cookie_reflections.txt", "a") as f:
+                            f.write(f"{full_url} -> {param} reflected in cookie\n")
+                        matched = True
+                        break
+            if not matched:
+                print("[~] No values reflected in cookies.")
+    except Exception as e:
+        print(f"[!] Error in cookie reflection check: {e}")
+###############################
+## ENDOF dynamit-cookie module
+###############################
 
 # Async version of mymain with timeout handled by session
 async def mymain_async(session, url, param, querySign, value, rcount):
@@ -177,12 +253,24 @@ async def mymain_async(session, url, param, querySign, value, rcount):
         #traceback.print_exc()
         pass  # stay silent like a shadow 😎
 
+####~~~~~~~~~~~~~~~~~~~~#####
+####    END OF ASYNCS   #####
+####~~~~~~~~~~~~~~~~~~~~#####
+
+
+
 
 # CLI check
 # Main logic to check if URL or file is provided
+resfile2=''
 if "--dynamit" in sys.argv:
     filename = input("Enter file with URLs: ")
     asyncio.run(run_dynamit_mode(filename, value))
+elif "--dynamit-cookies" in sys.argv:
+    resfile2='cookie_reflections.txt'
+    filename = input("Enter file with URLs: ")
+    asyncio.run(run_dynamit_cookie_mode(filename))
+
 else:
     # User input
     urlOrFile = input("Enter url or filename: ")
@@ -213,5 +301,8 @@ Your choice: """)
             urls = [f"https://{line.strip()}/" for line in file2 if line.strip()]
         # Run tasks for subdomains
         asyncio.run(run_all_tasks(urls, params, querySign, value))
+if (resfile2==''):
+    print("STATUS: Scan finished, check getfound.txt for results 😉")
+else:
+    print(f"STATUS: Scan finished, check {resfile2} for results 😉")
 
-print("STATUS: Scan finished, check getfound.txt for results 😉")

@@ -3,6 +3,9 @@ gbr() {
   if [ \"\$1\" == \"d\" ]; then
     shift
     python3 $(pwd)/getbruter.py --dynamit \"\$@\"
+  elif [ \"\$1\" == \"dc\" ]; then
+    shift
+    python3 $(pwd)/getbruter.py --dynamit-cookies \"\$@\"
   else
     python3 $(pwd)/getbruter.py \"\$@\"
   fi
