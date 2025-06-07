@@ -175,6 +175,67 @@ async def handle_url(session, raw_url, base_value):
 ## endof dynamit mode
 ###########################
 
+##################################
+## STARTOF dynamit-inject module
+##################################
+
+# New Dynamit Inject mode module
+async def run_dynamit_inject_mode(filename):
+    payload = "'NoWayThisCouldBeInHTML_1<NoWayThisCouldBeInHTML_2\""
+    try:
+        with open(filename, "r") as f:
+            urls = [line.strip() for line in f if line.strip() and "?" in line]
+    except Exception as e:
+        print(f"[!] Failed to read file: {filename} | Error: {e}")
+        return
+
+    conn = aiohttp.TCPConnector(limit=100)
+    async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
+        tasks = [handle_dynamit_inject(session, url, payload) for url in urls]
+        await asyncio.gather(*tasks)
+
+
+async def handle_dynamit_inject(session, raw_url, payload):
+    try:
+        parsed = urlparse(raw_url)
+        qs = dict(parse_qsl(parsed.query))
+        if not qs:
+            return
+
+        # Replace all parameter values with payload
+        injected_qs = {k: payload for k in qs.keys()}
+        new_query = urlencode(injected_qs)
+        parsed = parsed._replace(query=new_query)
+        full_url = urlunparse(parsed)
+
+        print(f"[⚡] Injecting: {full_url}")
+
+        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+            html = await resp.text()
+
+            risk_level = 0
+
+            if "'NoWayThisCouldBeInHTML_1" in html:
+                risk_level += 1
+            if "NoWayThisCouldBeInHTML_1<NoWayThisCouldBeInHTML_2" in html:
+                risk_level += 1
+            if "NoWayThisCouldBeInHTML_2\"" in html:
+                risk_level += 1
+
+            print(f"[!] Risk Level: {risk_level} | {raw_url}")
+
+            if risk_level >= 1:
+                with open(resfile, "a") as log:
+                    log.write(f"Risk {risk_level}: {full_url}\n")
+
+    except Exception as e:
+        print(f"[!] Error in inject handler: {e}")
+
+##################################
+## ENDOF dynamit-inject module
+#################################
+
+
 
 ##################################
 ## STARTOF dynamit-cookie module
@@ -222,7 +283,7 @@ async def handle_cookie_reflection(session, raw_url):
                 for cookie in set_cookie_headers:
                     if val in cookie:
                         print(f"[+] Param '{param}' reflected in cookie!")
-                        with open("cookie_reflections.txt", "a") as f:
+                        with open(resfile, "a") as f:
                             f.write(f"{full_url} -> {param} reflected in cookie\n")
                         matched = True
                         break
@@ -245,7 +306,7 @@ async def mymain_async(session, url, param, querySign, value, rcount):
             html = await response.text()
             if findReflections(0, rcount, value, html):
                 print(f"\n[+] Found reflections for parameter - {param.strip()}")
-                with open("getfound.txt", "a") as f:
+                with open(resfile, "a") as f:
                     f.write(f"{full_url} -> {str(reflectioncount)} (ignoreRCount={rcount})\n")  # +" -> "+ str(reflectioncount)   later add this but not rn, since I used recursion, it stops on found item and doesn't get for you all reflection differences -_-
                     # ahh yeahh recursion + or logic haha 
     except Exception as e:
@@ -262,47 +323,48 @@ async def mymain_async(session, url, param, querySign, value, rcount):
 
 # CLI check
 # Main logic to check if URL or file is provided
-resfile2=''
+
 if "--dynamit" in sys.argv:
-    filename = input("Enter file with URLs: ")
+    resfile = 'getfound.txt'
+    filename = input("Enter file with URLs: ").strip()
     asyncio.run(run_dynamit_mode(filename, value))
+
 elif "--dynamit-cookies" in sys.argv:
-    resfile2='cookie_reflections.txt'
-    filename = input("Enter file with URLs: ")
+    resfile = 'cookie_reflections.txt'
+    filename = input("Enter file with URLs: ").strip()
     asyncio.run(run_dynamit_cookie_mode(filename))
 
+elif "--dynamit-inject" in sys.argv:
+    resfile = 'inject_reflections.txt'
+    filename = input("Enter file with URLs: ").strip()
+    asyncio.run(run_dynamit_inject_mode(filename))
+
 else:
-    # User input
-    urlOrFile = input("Enter url or filename: ")
-    querySign = input("Choose either ? or & (if there is ? in url, choose &, default is ?): ") or "?"
-    wlist_choice = input("""~Worldlists available~
+    url_or_file = input("Enter URL or filename: ").strip()
+    query_sign = input("Choose either ? or & (if there is ? in URL, choose &, default is ?): ").strip() or "?"
+
+    print("""\n~Wordlists available~
 1) alpha1+2
 2) commonparams
-3) (enter wordlist if not in current path use absolute path)
-Your choice: """)
-    wlists = [path+'wlists/alpha1+2.txt', path+'wlists/commonparams.txt']
-    try: 
-        wlist = wlists[int(wlist_choice) - 1]
-    except:
-        wlist=wlist_choice
+3) (Enter custom path to a wordlist)\n""")
+    wlist_choice = input("Your choice: ").strip()
+    default_wlists = [path + 'wlists/alpha1+2.txt', path + 'wlists/commonparams.txt']
 
-    if urlOrFile.startswith("http://") or urlOrFile.startswith("https://"):
-        # Direct URL input
-        with open(wlist, "r") as file:
-            params = [line.strip() for line in file]
-        urls = [urlOrFile]
-        # Run tasks with direct URL, no need for prefix/suffix
-        asyncio.run(run_all_tasks(urls, params, querySign, value))
+    if wlist_choice in ['1', '2']:
+        wlist = default_wlists[int(wlist_choice) - 1]
     else:
-        # Handling subdomains
-        with open(wlist, "r") as file1, open(urlOrFile, "r") as file2:
-            # Adding the proper prefix for subdomains
-            params = [line.strip() for line in file1 if line.strip()]
-            urls = [f"https://{line.strip()}/" for line in file2 if line.strip()]
-        # Run tasks for subdomains
-        asyncio.run(run_all_tasks(urls, params, querySign, value))
-if (resfile2==''):
-    print("STATUS: Scan finished, check getfound.txt for results 😉")
-else:
-    print(f"STATUS: Scan finished, check {resfile2} for results 😉")
+        wlist = wlist_choice
 
+    with open(wlist, "r") as f:
+        params = [line.strip() for line in f if line.strip()]
+
+    if url_or_file.startswith(("http://", "https://")):
+        urls = [url_or_file]
+    else:
+        with open(url_or_file, "r") as f:
+            urls = [f"https://{line.strip()}/" for line in f if line.strip()]
+
+    resfile = 'getfound.txt'
+    asyncio.run(run_all_tasks(urls, params, query_sign, value))
+
+print(f"STATUS: Scan finished, check {resfile} for results 😉")

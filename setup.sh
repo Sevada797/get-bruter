@@ -1,15 +1,10 @@
-echo -e "\n## Get-Bruter setup 🐍
-gbr() {
-  if [ \"\$1\" == \"d\" ]; then
-    shift
-    python3 $(pwd)/getbruter.py --dynamit \"\$@\"
-  elif [ \"\$1\" == \"dc\" ]; then
-    shift
-    python3 $(pwd)/getbruter.py --dynamit-cookies \"\$@\"
-  else
-    python3 $(pwd)/getbruter.py \"\$@\"
-  fi
-}
-export GETBRUTER_PATH=$(pwd)
-# 📟 To use, type: gbr
-" >> ~/.bashrc && echo -e "\n✅ Setup done! Reload shell or run: source ~/.bashrc" && echo "📟 To use, type: gbr"
+#!/bin/bash
+# setup.sh — sets up GetBruter environment
+
+echo -e "\n## GetBruter setup 🐍" >> ~/.bashrc
+echo "export GETBRUTER_PATH=\"$(pwd)\"" >> ~/.bashrc
+echo "source \"\$GETBRUTER_PATH/getbruter.sh\"" >> ~/.bashrc
+
+echo -e "\n✅ Setup done!"
+echo "🔁 Reload shell or run: source ~/.bashrc"
+echo "📟 To use, type: gbr"
