@@ -16,8 +16,10 @@ I added new modules, which can help quite a bit, here how you can run them after
 
 ```gbr dc``` - dynamit cookie injection
 
-Please note: before passing to any dynamit mode you should provide URLs and sure with parameters, <br>
+Please Note: before passing to any dynamit mode you should provide URLs and sure with parameters, <br>
 so like you can `grep "?" urls | grep = >4d` then pass this "4d" file to gbr dynamit modules.
+
+And just pass subs list (or single URL) to ```gbr``` basic mode since I designed it that way.. I may later fix to auto append https if it misses.
 
 ## Features
 
