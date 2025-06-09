@@ -16,6 +16,8 @@ I added new modules, which can help quite a bit, here how you can run them after
 
 ```gbr dc``` - dynamit cookie injection
 
+These were the ways to use the bash caller function, they just call the python file, I just like keeping namings shorter :D
+
 Please Note: before passing to any dynamit mode you should provide URLs and sure with parameters, <br>
 so like you can `grep "?" urls | grep = >4d` then pass this "4d" file to gbr dynamit modules.
 
