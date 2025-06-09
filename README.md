@@ -7,10 +7,15 @@
 
 ## New modules!
 I added new modules, which can help quite a bit, here how you can run them after full setup.
+
 ```gbr``` - basic mode
+
 ``` gbr d``` - dynamit mode
+
 ```gbr di``` - dynamit inject mode
+
 ```gbr dc``` - dynamit cookie injection
+
 Please note: before passing to any dynamit mode you should provide URLs and sure with parameters, <br>
 so like you can `grep "?" urls | grep = >4d` then pass this "4d" file to gbr dynamit modules.
 
