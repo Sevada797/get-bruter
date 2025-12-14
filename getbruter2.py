@@ -34,7 +34,8 @@ os.system("clear")
 time.sleep(1)
 os.system("clear")
 print(f"--------------------------Get-Bruter V{version}--------------------------")
-print("Author: @Sevada797\n")
+print("Author: @Sevada797")
+print("[INFO]: Called gbr2 this is useful for 301,302,307 XSS hunting\n")
 
 # Value to use in URL parameters
 value = f"NoWayThisCouldBeInHTML64f27e18356fa{random.randint(0, 1000000)}"
@@ -94,7 +95,7 @@ async def run_all_tasks(urls, params, querySign, value):
         for url in urls:
             try:
                 test_url = f"{url}{querySign}someNonExistingParam={value}"
-                async with session.get(test_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+                async with session.get(test_url, headers=headers, allow_redirects=False, ssl=False) as resp:
                     html = await resp.text()
                     rcount = getIgnoreRcount(value, html)
                     print(f"\n[***] Scanning subdomain: {url}")
@@ -148,7 +149,7 @@ async def handle_url(session, raw_url, base_value):
         print(f"\n[~] Testing: {raw_url}")
         
         try:
-            async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+            async with session.get(full_url, headers=headers, allow_redirects=False, ssl=False) as resp:
                 html = await resp.text()
                 rcount = getIgnoreRcount(base_value, html)
                 print(f"[+] Reflection count for {raw_url}: {rcount}")
@@ -209,7 +210,7 @@ async def handle_dynamit_inject(session, raw_url, payload):
 
         print(f"[⚡] Injecting: {full_url}")
 
-        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+        async with session.get(full_url, headers=headers, allow_redirects=False, ssl=False) as resp:
             html = await resp.text()
 
             risk_level = 0
@@ -220,8 +221,9 @@ async def handle_dynamit_inject(session, raw_url, payload):
                 risk_level += 1
             if "NoWayThisCouldBeInHTML_2\"mySafeStr" in html:
                 risk_level += 1
-            if "`mySafeStr" in html or "mySafeStr`" in html or "mySafeStr " in html or "mySafeStr>" in html:
+            if "`mySafeStr" in html or "mySafeStr`" in html:
                 risk_level=900
+
             print(f"[!] Risk Level: {risk_level} | {raw_url}")
 
             if risk_level >= 1:
@@ -235,85 +237,6 @@ async def handle_dynamit_inject(session, raw_url, payload):
 ## ENDOF dynamit-inject module
 #################################
 
-
-# ================================
-#  Dynamit Encodings Mode
-# ================================
-UNI = [
-    "＇",  # U+FF07 fullwidth apostrophe
-    "＂",  # U+FF02 fullwidth quote
-    "＜",  # U+FF1C fullwidth less-than
-    "﹤",  # U+FE64 small less-than
-    "’",  # U+2019 right single quote
-    "”",  # U+201D right double quote
-]
-
-ENC_TOKEN = "encs"
-
-# Build payload automatically
-encoding_payload = "".join(f"{ENC_TOKEN}{u}" for u in UNI) + ENC_TOKEN
-
-# Patterns we expect AFTER normalization
-NORMALIZED_TARGETS = {
-    "<": ["＜", "﹤"],
-    "'": ["＇", "’"],
-    "\"": ["＂", "”"],
-}
-
-async def run_dynamit_enc_mode(filename):
-    try:
-        with open(filename, "r") as f:
-            urls = [line.strip() for line in f if line.strip() and "?" in line]
-    except Exception as e:
-        print(f"[!] Failed to read file: {filename} | Error: {e}")
-        return
-
-    conn = aiohttp.TCPConnector(limit=100)
-    async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
-        tasks = [handle_dynamit_enc(session, url, encoding_payload) for url in urls]
-        await asyncio.gather(*tasks)
-
-
-async def handle_dynamit_enc(session, raw_url, payload):
-    try:
-        parsed = urlparse(raw_url)
-        qs = dict(parse_qsl(parsed.query))
-        if not qs:
-            return
-
-        injected_qs = {k: payload for k in qs.keys()}
-        new_query = urlencode(injected_qs)
-        parsed = parsed._replace(query=new_query)
-        full_url = urlunparse(parsed)
-
-        print(f"[⚡] Encoding check: {full_url}")
-
-        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
-            html = await resp.text()
-
-            risk = 0
-
-            # robust wrapped check
-            for ascii_char, variants in NORMALIZED_TARGETS.items():
-                expected_wrapped = f"{ENC_TOKEN}{ascii_char}{ENC_TOKEN}"  # e.g. encs<encs
-                if expected_wrapped in html:
-                    print(f"[!] Normalized to ASCII wrapped pattern found: {expected_wrapped}")
-                    risk += 1
-
-
-            if risk > 0:
-                with open(resfile, "a") as log:
-                    log.write(f"ENCODING_NORMALIZED ({risk}): {full_url}\n")
-
-            print(f"[✓] Risk {risk} | {raw_url}")
-
-    except Exception as e:
-        print(f"[!] Error in enc handler: {e}")
-
-
-# ================================
-#  Dynamit Encodings Mode End
-# ================================
 
 
 ##################################
@@ -349,7 +272,7 @@ async def handle_cookie_reflection(session, raw_url):
         full_url = urlunparse(parsed)
 
         print(f"\n[🍪] Testing (cookies): {full_url}")
-        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
+        async with session.get(full_url, headers=headers, allow_redirects=False, ssl=False) as resp:
             cookies = resp.cookies
             set_cookie_headers = resp.headers.getall("Set-Cookie", [])
 
@@ -381,7 +304,7 @@ async def mymain_async(session, url, param, querySign, value, rcount):
     print(f"Testing URL: {full_url}")
 
     try:
-        async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as response:
+        async with session.get(full_url, headers=headers, allow_redirects=False, ssl=False) as response:
             html = await response.text()
             if findReflections(0, rcount, value, html):
                 print(f"\n[+] Found reflections for parameter - {param.strip()}")
@@ -418,24 +341,18 @@ elif "--dynamit-inject" in sys.argv:
     filename = input("Enter file with URLs: ").strip()
     asyncio.run(run_dynamit_inject_mode(filename))
 
-elif "--dynamit-enc" in sys.argv:
-    resfile = 'enc_mutations.txt'
-    filename = input("Enter file with URLs: ").strip()
-    asyncio.run(run_dynamit_enc_mode(filename))
-
 else:
     url_or_file = input("Enter URL or filename: ").strip()
     query_sign = input("Choose either ? or & (if there is ? in URL, choose &, default is ?): ").strip() or "?"
 
     print("""\n~Wordlists available~
-1) Alpha1+2
-2) Common params
-3) Burp-Parameter-Names
-4) (Enter custom path to a wordlist)\n""")
+1) alpha1+2
+2) commonparams
+3) (Enter custom path to a wordlist)\n""")
     wlist_choice = input("Your choice: ").strip()
-    default_wlists = [path + 'wlists/alpha1+2.txt', path + 'wlists/commonparams.txt', path + 'wlists/burp-parameter-names.txt']
+    default_wlists = [path + 'wlists/alpha1+2.txt', path + 'wlists/commonparams.txt']
 
-    if wlist_choice in ['1', '2', '3']:
+    if wlist_choice in ['1', '2']:
         wlist = default_wlists[int(wlist_choice) - 1]
     else:
         wlist = wlist_choice
