@@ -220,7 +220,7 @@ async def handle_dynamit_inject(session, raw_url, payload):
                 risk_level += 1
             if "NoWayThisCouldBeInHTML_2\"mySafeStr" in html:
                 risk_level += 1
-            if "`mySafeStr" in html or "mySafeStr`" in html or "mySafeStr " in html or "mySafeStr>" in html:
+            if "`mySafeStr" in html or "mySafeStr`" in html or "mySafeStr>" in html:
                 risk_level=900
             print(f"[!] Risk Level: {risk_level} | {raw_url}")
 
