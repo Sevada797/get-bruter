@@ -221,9 +221,8 @@ async def handle_dynamit_inject(session, raw_url, payload):
                 risk_level += 1
             if "NoWayThisCouldBeInHTML_2\"mySafeStr" in html:
                 risk_level += 1
-            if "`mySafeStr" in html or "mySafeStr`" in html or "mySafeStr>" in html :
+            if "`mySafeStr" in html or "mySafeStr`" in html or "mySafeStr>" in html:
                 risk_level=900
-
             print(f"[!] Risk Level: {risk_level} | {raw_url}")
 
             if risk_level >= 1:
@@ -237,6 +236,74 @@ async def handle_dynamit_inject(session, raw_url, payload):
 ## ENDOF dynamit-inject module
 #################################
 
+
+# ==========================================================
+#  Dynamit Encodings Mode Removed (just keeping these here)
+# ==========================================================
+#UNI = [
+#    "＇",  # U+FF07 fullwidth apostrophe
+#    "＂",  # U+FF02 fullwidth quote
+#    "＜",  # U+FF1C fullwidth less-than
+#    "﹤",  # U+FE64 small less-than
+#    "’",  # U+2019 right single quote
+#    "”",  # U+201D right double quote
+#]
+# ================================
+#  Dynamit SSTI Mode Added instead
+# ================================
+
+async def run_dynamit_ssti_mode(filename):
+    try:
+        with open(filename, "r") as f:
+            urls = [line.strip() for line in f if line.strip() and "?" in line]
+    except Exception as e:
+        print(f"[!] Failed to read file: {filename} | Error: {e}")
+        return
+    payload = "nowaylol{{8*8}}nowaylol<%= 8*8 %>nowaylol"
+    expected_output = "nowaylol64nowaylol"
+    conn = aiohttp.TCPConnector(limit=100)
+    async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
+        tasks = [handle_dynamit_ssti(session, url, payload, expected_output) for url in urls]
+        await asyncio.gather(*tasks)
+
+
+async def handle_dynamit_ssti(session, raw_url, payload, expected_output):
+    try:
+        parsed = urlparse(raw_url)
+        qs = dict(parse_qsl(parsed.query))
+        if not qs:
+            return
+        # Replace all parameter values with payload
+        injected_qs = {k: payload for k in qs.keys()}
+        new_query = urlencode(injected_qs)
+        parsed = parsed._replace(query=new_query)
+        full_url = urlunparse(parsed)
+
+        print(f"[⚡] SSTI payload injected: {full_url}")
+
+        async with session.get(full_url, headers=headers, allow_redirects=False, ssl=False) as resp:
+            html = await resp.text()
+
+            risk = 0
+
+            # robust wrapped check
+            if expected_output in html:
+                print(f"[!] SSTI {expected_output} reflection found: {full_url}")
+                risk += 1
+
+
+            if risk > 0:
+                with open(resfile, "a") as log:
+                    log.write(f"SSTI found at: {full_url}\n")
+                    print(f"[✓] SSTI found at: {full_url}")
+
+    except Exception as e:
+        print(f"[!] Error in ssti handler: {e}")
+
+
+# ================================
+#  Dynamit SSTI Mode End
+# ================================
 
 
 ##################################
@@ -325,34 +392,50 @@ async def mymain_async(session, url, param, querySign, value, rcount):
 
 # CLI check
 # Main logic to check if URL or file is provided
+def get_filename_from_argv_or_prompt():
+    if len(sys.argv) >= 3:
+        candidate = sys.argv[2]
+        if os.path.isfile(candidate):
+            return candidate
+        else:
+            print(f"[!] Provided path is not a file: {candidate}")
+            sys.exit(1)
+    return input("Enter file with URLs: ").strip()
+
 
 if "--dynamit" in sys.argv:
-    resfile = 'getfound.txt'
-    filename = input("Enter file with URLs: ").strip()
+    resfile = 'getfound2.txt'
+    filename = get_filename_from_argv_or_prompt()
     asyncio.run(run_dynamit_mode(filename, value))
 
 elif "--dynamit-cookies" in sys.argv:
-    resfile = 'cookie_reflections.txt'
-    filename = input("Enter file with URLs: ").strip()
+    resfile = 'cookie_reflections2.txt'
+    filename = get_filename_from_argv_or_prompt()
     asyncio.run(run_dynamit_cookie_mode(filename))
 
 elif "--dynamit-inject" in sys.argv:
-    resfile = 'inject_reflections.txt'
-    filename = input("Enter file with URLs: ").strip()
+    resfile = 'inject_reflections2.txt'
+    filename = get_filename_from_argv_or_prompt()
     asyncio.run(run_dynamit_inject_mode(filename))
+
+elif "--dynamit-ssti" in sys.argv:
+    resfile = 'ssti_reflections2.txt'
+    filename = get_filename_from_argv_or_prompt()
+    asyncio.run(run_dynamit_ssti_mode(filename))
 
 else:
     url_or_file = input("Enter URL or filename: ").strip()
     query_sign = input("Choose either ? or & (if there is ? in URL, choose &, default is ?): ").strip() or "?"
 
     print("""\n~Wordlists available~
-1) alpha1+2
-2) commonparams
-3) (Enter custom path to a wordlist)\n""")
+1) Alpha1+2
+2) Common params
+3) Burp-Parameter-Names
+4) (Enter custom path to a wordlist)\n""")
     wlist_choice = input("Your choice: ").strip()
-    default_wlists = [path + 'wlists/alpha1+2.txt', path + 'wlists/commonparams.txt']
+    default_wlists = [path + 'wlists/alpha1+2.txt', path + 'wlists/commonparams.txt', path + 'wlists/burp-parameter-names.txt']
 
-    if wlist_choice in ['1', '2']:
+    if wlist_choice in ['1', '2', '3']:
         wlist = default_wlists[int(wlist_choice) - 1]
     else:
         wlist = wlist_choice
@@ -366,7 +449,10 @@ else:
         with open(url_or_file, "r") as f:
             urls = [f"https://{line.strip()}/" for line in f if line.strip()]
 
-    resfile = 'getfound.txt'
+    resfile = 'getfound2.txt'
     asyncio.run(run_all_tasks(urls, params, query_sign, value))
 
-print(f"STATUS: Scan finished, check {resfile} for results 😉")
+if os.path.isfile(resfile):
+    print(f"STATUS: Scan finished, check {resfile} for results 😉")
+else:
+    print(f"STATUS: Scan finished, no results 😕️")

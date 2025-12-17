@@ -236,57 +236,49 @@ async def handle_dynamit_inject(session, raw_url, payload):
 #################################
 
 
+# ==========================================================
+#  Dynamit Encodings Mode Removed (just keeping these here)
+# ==========================================================
+#UNI = [
+#    "＇",  # U+FF07 fullwidth apostrophe
+#    "＂",  # U+FF02 fullwidth quote
+#    "＜",  # U+FF1C fullwidth less-than
+#    "﹤",  # U+FE64 small less-than
+#    "’",  # U+2019 right single quote
+#    "”",  # U+201D right double quote
+#]
 # ================================
-#  Dynamit Encodings Mode
+#  Dynamit SSTI Mode Added instead
 # ================================
-UNI = [
-    "＇",  # U+FF07 fullwidth apostrophe
-    "＂",  # U+FF02 fullwidth quote
-    "＜",  # U+FF1C fullwidth less-than
-    "﹤",  # U+FE64 small less-than
-    "’",  # U+2019 right single quote
-    "”",  # U+201D right double quote
-]
 
-ENC_TOKEN = "encs"
-
-# Build payload automatically
-encoding_payload = "".join(f"{ENC_TOKEN}{u}" for u in UNI) + ENC_TOKEN
-
-# Patterns we expect AFTER normalization
-NORMALIZED_TARGETS = {
-    "<": ["＜", "﹤"],
-    "'": ["＇", "’"],
-    "\"": ["＂", "”"],
-}
-
-async def run_dynamit_enc_mode(filename):
+async def run_dynamit_ssti_mode(filename):
     try:
         with open(filename, "r") as f:
             urls = [line.strip() for line in f if line.strip() and "?" in line]
     except Exception as e:
         print(f"[!] Failed to read file: {filename} | Error: {e}")
         return
-
+    payload = "nowaylol{{8*8}}nowaylol<%= 8*8 %>nowaylol"
+    expected_output = "nowaylol64nowaylol"
     conn = aiohttp.TCPConnector(limit=100)
     async with aiohttp.ClientSession(connector=conn, timeout=timeout) as session:
-        tasks = [handle_dynamit_enc(session, url, encoding_payload) for url in urls]
+        tasks = [handle_dynamit_ssti(session, url, payload, expected_output) for url in urls]
         await asyncio.gather(*tasks)
 
 
-async def handle_dynamit_enc(session, raw_url, payload):
+async def handle_dynamit_ssti(session, raw_url, payload, expected_output):
     try:
         parsed = urlparse(raw_url)
         qs = dict(parse_qsl(parsed.query))
         if not qs:
             return
-
+        # Replace all parameter values with payload
         injected_qs = {k: payload for k in qs.keys()}
         new_query = urlencode(injected_qs)
         parsed = parsed._replace(query=new_query)
         full_url = urlunparse(parsed)
 
-        print(f"[⚡] Encoding check: {full_url}")
+        print(f"[⚡] SSTI payload injected: {full_url}")
 
         async with session.get(full_url, headers=headers, allow_redirects=True, ssl=False) as resp:
             html = await resp.text()
@@ -294,25 +286,22 @@ async def handle_dynamit_enc(session, raw_url, payload):
             risk = 0
 
             # robust wrapped check
-            for ascii_char, variants in NORMALIZED_TARGETS.items():
-                expected_wrapped = f"{ENC_TOKEN}{ascii_char}{ENC_TOKEN}"  # e.g. encs<encs
-                if expected_wrapped in html:
-                    print(f"[!] Normalized to ASCII wrapped pattern found: {expected_wrapped}")
-                    risk += 1
+            if expected_output in html:
+                print(f"[!] SSTI {expected_output} reflection found: {full_url}")
+                risk += 1
 
 
             if risk > 0:
                 with open(resfile, "a") as log:
-                    log.write(f"ENCODING_NORMALIZED ({risk}): {full_url}\n")
-
-            print(f"[✓] Risk {risk} | {raw_url}")
+                    log.write(f"SSTI found at: {full_url}\n")
+                    print(f"[✓] SSTI found at: {full_url}")
 
     except Exception as e:
-        print(f"[!] Error in enc handler: {e}")
+        print(f"[!] Error in ssti handler: {e}")
 
 
 # ================================
-#  Dynamit Encodings Mode End
+#  Dynamit SSTI Mode End
 # ================================
 
 
@@ -402,26 +391,36 @@ async def mymain_async(session, url, param, querySign, value, rcount):
 
 # CLI check
 # Main logic to check if URL or file is provided
+def get_filename_from_argv_or_prompt():
+    if len(sys.argv) >= 3:
+        candidate = sys.argv[2]
+        if os.path.isfile(candidate):
+            return candidate
+        else:
+            print(f"[!] Provided path is not a file: {candidate}")
+            sys.exit(1)
+    return input("Enter file with URLs: ").strip()
+
 
 if "--dynamit" in sys.argv:
     resfile = 'getfound.txt'
-    filename = input("Enter file with URLs: ").strip()
+    filename = get_filename_from_argv_or_prompt()
     asyncio.run(run_dynamit_mode(filename, value))
 
 elif "--dynamit-cookies" in sys.argv:
     resfile = 'cookie_reflections.txt'
-    filename = input("Enter file with URLs: ").strip()
+    filename = get_filename_from_argv_or_prompt()
     asyncio.run(run_dynamit_cookie_mode(filename))
 
 elif "--dynamit-inject" in sys.argv:
     resfile = 'inject_reflections.txt'
-    filename = input("Enter file with URLs: ").strip()
+    filename = get_filename_from_argv_or_prompt()
     asyncio.run(run_dynamit_inject_mode(filename))
 
-elif "--dynamit-enc" in sys.argv:
-    resfile = 'enc_mutations.txt'
-    filename = input("Enter file with URLs: ").strip()
-    asyncio.run(run_dynamit_enc_mode(filename))
+elif "--dynamit-ssti" in sys.argv:
+    resfile = 'ssti_reflections.txt'
+    filename = get_filename_from_argv_or_prompt()
+    asyncio.run(run_dynamit_ssti_mode(filename))
 
 else:
     url_or_file = input("Enter URL or filename: ").strip()
@@ -452,4 +451,7 @@ else:
     resfile = 'getfound.txt'
     asyncio.run(run_all_tasks(urls, params, query_sign, value))
 
-print(f"STATUS: Scan finished, check {resfile} for results 😉")
+if os.path.isfile(resfile):
+    print(f"STATUS: Scan finished, check {resfile} for results 😉")
+else:
+    print(f"STATUS: Scan finished, no results 😕️")
