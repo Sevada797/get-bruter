@@ -3,9 +3,9 @@
 
 gbr() {
   local cmd="$1"
-  shift
+shift
 
-if [[ "$cmd" -eq "-h" || "$cmd" -eq "--help" ]]
+if [[ "$cmd" == "-h" || "$cmd" == "--help" ]]
 then
 echo "Usage: gbr [d, di, dc, ssti] [<urls_file>]"
 echo ""
@@ -20,6 +20,7 @@ echo ""
 echo "NOTE: gbr2 is for not following redirects ... (may later add all in one)"
 return
 fi
+
 
   case "$cmd" in
     d)
@@ -44,9 +45,9 @@ fi
 
 gbr2() {
   local cmd="$1"
-  shift
+shift
 
-if [[ "$cmd" -eq "-h" || "$cmd" -eq "--help" ]]
+if [[ "$cmd" == "-h" || "$cmd" == "--help" ]]
 then
 echo "Check gbr -h, same works here"
 return
